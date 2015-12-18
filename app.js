@@ -8,8 +8,24 @@ var ipaddress = process.env.OPENSHIFT_NODEJS_IP || "127.0.0.1";
 var port = process.env.OPENSHIFT_NODEJS_PORT || 50000;
 var photonAccess;
 var device;
+var request = require('request');
 
-// Add headers
+var webAppURL = "oldeb.res.cmu.edu:3000/inputstreamround"
+var sendURL;
+
+var dataArr = [0,0,0,0]
+
+spark.login({username: 'justin.a.hilliard@gmail.com', password: 'Hi11i@rd'},
+            function(err, body) {
+  				console.log('API call login completed on callback:', body);
+  				photonAccess = body.access_token
+  		  		spark.getDevice('350022000147343337373738', function(err, deviceRet) {
+  		  			device = deviceRet;
+  					console.log('Device name: ' + device.name);
+				});
+	}
+);
+
 app.use(function (req, res, next) {
 
     // Website you wish to allow to connect
@@ -33,47 +49,62 @@ app.options('*', cors());
 
 app.use(morgan('dev'));
 
-spark.login({username: 'justin.a.hilliard@gmail.com', password: 'Hi11i@rd'},
-            function(err, body) {
-  				console.log('API call login completed on callback:', body);
-  				photonAccess = body.access_token
-  		  		spark.getDevice('350022000147343337373738', function(err, deviceRet) {
-  		  			device = deviceRet;
-  					console.log('Device name: ' + device.name);
-				});
-	}
-);
 
-app.get("/getSensorData/", function( req, res ){
-	console.log("getSENSHIT");
-	getSensorDataArr(function(fullDataArr){
-		console.log("fullDataArr: " + fullDataArr);
-		res.send(fullDataArr);
-	});
-});
+// Add headers
+setInterval(function(){
+	console.log(dataArr);
+		sendURL= "http://" +  webAppURL + '/' + dataArr[0] + '/' 
+			+ dataArr[1] + '/' + dataArr[2] + '/' + dataArr[3];
+			console.log(sendURL)
+		request(sendURL, function (error, response, body) {
+		  if (!error && response.statusCode == 200) {
+		  	console.log(Date.now());
+		  } else {
+		  	console.log("This is an Error:  " + error);
+		  }
+		});
+}, 3000)
 
-var getSensorDataArr = function(callback) {
-	var dataArr = [];
-	for (var i = 4; i > 0; i--) {
-		var tempname = "fsrReading" + i;
-		console.log(tempname);
-		device.getVariable(tempname, function(err, data) {
+setInterval(function(){
+	device.getVariable("fsrReading1", function(err, data) {
 		  if (err) {
 		    console.log('An error occurred while getting attrs:', err);
 		  } else {
-		    console.log('Device attr retrieved successfully:', data);
-		    dataArr.push(data.result);
-		    console.log("dataArrSize: " + dataArr.length );
-		    console.log("data result: " + data.result );
-		    console.log("dataArr: " + dataArr )
-		    if (dataArr.length == 4) {
-		    	callback(dataArr);
-		    }
+		    dataArr[0] = data.result
 		  }
-		});
-	};
-}
+	});
+}, 500)
 
+setInterval(function(){
+	device.getVariable("fsrReading2", function(err, data) {
+		  if (err) {
+		    console.log('An error occurred while getting attrs:', err);
+		  } else {
+		    dataArr[1] = data.result
+		  }
+	});
+}, 500)
+
+setInterval(function(){
+	device.getVariable("fsrReading3", function(err, data) {
+		  if (err) {
+		    console.log('An error occurred while getting attrs:', err);
+		  } else {
+		    dataArr[2] = data.result
+		  }
+	});
+}, 500)
+
+setInterval(function(){
+	device.getVariable("fsrRead
+		ing4", function(err, data) {
+		  if (err) {
+		    console.log('An error occurred while getting attrs:', err);
+		  } else {
+		    dataArr[3] = data.result
+		  }
+	});
+}, 500)
 
 
 
